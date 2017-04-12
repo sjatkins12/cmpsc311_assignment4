@@ -63,15 +63,15 @@ int16_t crud_open(char *path) {
 		return (-1); // Invalid Path
 	}
 
-	for (fh = 0; fh < CRUD_MAX_TOTAL_FILES && strcmp(crud_file_table[fh], path) != 0; fh++)
+	for (fh = 0; fh < CRUD_MAX_TOTAL_FILES && strcmp(crud_file_table[fh].filename, path) != 0; fh++)
 		;
 	// File Not Created, Must Create it
 	if (fh == CRUD_MAX_TOTAL_FILES) {
 		fh = 0;
 		buff = malloc(CRUD_MAX_OBJECT_SIZE);
-		request = construct_crud_request(0, CREATE, 0, 0, 0);
+		request = construct_crud_request(0, CRUD_CREATE, 0, 0, 0);
 		response = crud_bus_request(request, buff); 
-		while (strcmp(crud_file_table[fh], "") != 0) {
+		while (strcmp(crud_file_table[fh].filename, "") != 0) {
 			fh++;
 			if (fh == CRUD_MAX_TOTAL_FILES) {
 				logMessage(LOG_ERROR_LEVEL, "CRUD_IO_OPEN : FULL FILE TABLE.");
