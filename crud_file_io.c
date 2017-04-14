@@ -78,6 +78,7 @@ int16_t crud_open(char *path) {
 				return (-1); //No Room in File Table
 			}
 		}
+		printf("FH: %d\n", fh);
 		deconstruct_crud_request(request, &oid, &req, &length, &flags, &res);
 		crud_file_table[fh].object_id = oid;
 		crud_file_table[fh].position = 0;
@@ -445,7 +446,6 @@ uint16_t crud_unmount(void) {
 	if (response & 0x1) //Sucsessfull CRUD Request
 		return (-1); 
 
-	initFlag = 0;
 	// Log, return successfully
 	logMessage(LOG_INFO_LEVEL, "... unmount complete.");
 	return (0);
