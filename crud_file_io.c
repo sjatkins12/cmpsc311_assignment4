@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  File           : crud_file_io.h
+//  File           : crud_file_io.c
 //  Description    : This is the implementation of the standardized IO functions
 //                   for used to access the CRUD storage system.
 //
-//  Author         : Patrick McDaniel
-//  Last Modified  : Mon Oct 20 12:38:05 PDT 2014
+//  Author         : Samuel Atkins
+//  Last Modified  : Fri Apr 14 12:38:05 PDT 2017
 //
 
 // Includes
@@ -44,6 +44,22 @@ int deconstruct_crud_request(CrudRequest request, CrudOID *oid,
 
 //
 // Implementation
+
+int initCheck() {
+	CrudRequest request;
+	CrudResponse response;
+
+	if (initFlag == 0) {
+		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
+		response = crud_bus_request(request, NULL); // Initialize Object Store
+		if (response & 0x1) //Sucsessfull CRUD Request
+			return (0); // Failure to create new Object Store
+		initFlag = 1;
+	}
+	return (1);
+}
+
+
 int16_t crud_open(char *path) {
 	int fh;
 	CRUD_REQUEST_TYPES req;
@@ -54,13 +70,8 @@ int16_t crud_open(char *path) {
 	CrudRequest request;
 	CrudResponse response;
 
-	if (initFlag == 0) {
-		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
-		response = crud_bus_request(request, NULL); // Initialize Object Store
-		if (response & 0x1) //Sucsessfull CRUD Request
-			return (-1); // Failure to create new Object Store
-		initFlag = 1;
-	}
+	if (!initCheck())
+		return (-1);
 
 	if (strlen(path) <= 0 || strlen(path) > CRUD_MAX_PATH_LENGTH) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_OPEN : Invalid Path.");
@@ -68,13 +79,17 @@ int16_t crud_open(char *path) {
 	}
 
 	for (fh = 0; fh < CRUD_MAX_TOTAL_FILES && strcmp(crud_file_table[fh].filename, path) != 0; fh++)
-		;
+		; //Search for path in table
+
 	// File Not Created, Must Create it
 	if (fh == CRUD_MAX_TOTAL_FILES) {
 		fh = 0;
 		buff = malloc(CRUD_MAX_OBJECT_SIZE);
+
 		request = construct_crud_request(0, CRUD_CREATE, 0, 0, 0);
 		response = crud_bus_request(request, buff); 
+
+		//Find first empty spot in table
 		while (strcmp(crud_file_table[fh].filename, "") != 0) {
 			fh++;
 			if (fh == CRUD_MAX_TOTAL_FILES) {
@@ -82,6 +97,7 @@ int16_t crud_open(char *path) {
 				return (-1); //No Room in File Table
 			}
 		}
+
 		deconstruct_crud_request(request, &oid, &req, &length, &flags, &res);
 		crud_file_table[fh].object_id = oid;
 		crud_file_table[fh].position = 0;
@@ -113,17 +129,10 @@ int16_t crud_open(char *path) {
 // Outputs      : 0 if successful, -1 if failure
 
 int16_t crud_close(int16_t fd) {
-	CrudRequest request;
-	CrudResponse response;
+	if (!initCheck())
+		return (-1);
 
-	if (initFlag == 0) {
-		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
-		response = crud_bus_request(request, NULL); // Initialize Object Store
-		if (response & 0x1) //Sucsessfull CRUD Request
-			return (-1); // Failure to create new Object Store
-		initFlag = 1;
-	}
-
+	//Param Check
 	if (fd >= CRUD_MAX_TOTAL_FILES || fd < 0) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_CLOSE : File Handle Invalid.");
 		return (-1);
@@ -155,14 +164,10 @@ int32_t crud_read(int16_t fd, void *buf, int32_t count) {
 	CrudRequest request;
 	char *tbuf;
 
-	if (initFlag == 0) {
-		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
-		response = crud_bus_request(request, NULL); // Initialize Object Store
-		if (response & 0x1) //Sucsessfull CRUD Request
-			return (-1); // Failure to create new Object Store
-		initFlag = 1;
-	}
+	if (!initCheck())
+		return (-1);
 
+	//Param Check
 	if (fd >= CRUD_MAX_TOTAL_FILES || fd < 0) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_READ : File Handle Invalid.");
 		return (-1);
@@ -172,7 +177,8 @@ int32_t crud_read(int16_t fd, void *buf, int32_t count) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_READ : File Closed.");
 		return (-1);
 	}
-	if (crud_file_table[fd].object_id == 0)
+
+	if (crud_file_table[fd].object_id == 0) //Edge Case Check
 		return (0);
 	
 
@@ -213,14 +219,10 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 	char *tbuf;
 	char *cbuf;
 
-	if (initFlag == 0) {
-		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
-		response = crud_bus_request(request, NULL); // Initialize Object Store
-		if (response & 0x1) //Sucsessfull CRUD Request
-			return (-1); // Failure to create new Object Store
-		initFlag = 1;
-	}
+	if (!initCheck())
+		return (-1);
 
+	// Param Check
 	if (fd >= CRUD_MAX_TOTAL_FILES || fd < 0) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_WRITE : File Handle Invalid.");
 		return (-1);
@@ -230,20 +232,24 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_WRITE : File Closed.");
 		return (-1);
 	}
-	cbuf = calloc(crud_file_table[fd].length, 1);
+
+	cbuf = calloc(crud_file_table[fd].length, 1); //Must zero mem in case read doesn't happen
+
 	if (crud_file_table[fd].object_id != 0) {
+
 		// READ ALL OF OBJECT INTO CBUF
 		request = construct_crud_request(
 			crud_file_table[fd].object_id, CRUD_READ, crud_file_table[fd].length, 0, 0);
-		
 		response = crud_bus_request(request, cbuf);
 		if (response & 0x1) { //MAKE SURE GOOD READ
 			free(cbuf);
 			return (-1);
 		}
 	}
+
 	// Write to big for current Object
 	if (crud_file_table[fd].position + count > crud_file_table[fd].length) {
+		//Edge Case Check
 		if (crud_file_table[fd].object_id != 0) { 
 			// DELETE OLD OBJECT
 			request = construct_crud_request(
@@ -309,14 +315,9 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 int32_t crud_seek(int16_t fd, uint32_t loc) {
 	CrudResponse response;
 	CrudRequest request;
-
-	if (initFlag == 0) {
-		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
-		response = crud_bus_request(request, NULL); // Initialize Object Store
-		if (response & 0x1) //Sucsessfull CRUD Request
-			return (-1); // Failure to create new Object Store
-		initFlag = 1;
-	}
+	
+	if (!initCheck())
+		return (-1);
 
 	if (fd >= CRUD_MAX_TOTAL_FILES || fd < 0) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_SEEK : File Handle Invalid.");
@@ -349,18 +350,14 @@ uint16_t crud_format(void) {
 	CrudResponse response;
 	CrudRequest request;
 
-	if (initFlag == 0) {
-		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
-		response = crud_bus_request(request, NULL); // Initialize Object Store
-		if (response & 0x1) //Sucsessfull CRUD Request
-			return (-1); // Failure to create new Object Store
-		initFlag = 1;
-	}
+	if (!initCheck())
+		return (-1);
 
 	request = construct_crud_request(0, CRUD_FORMAT, 0, 0, 0);
 	response = crud_bus_request(request, NULL); // Initialize Object Store
 	if (response & 0x1) //Sucsessfull CRUD Request
 		return (-1); // Failure to Format new Object Store
+
 
 	//Set Crud_File_Table to 0's
 	for (int i = 0; i < CRUD_MAX_TOTAL_FILES; i++) {
@@ -374,7 +371,7 @@ uint16_t crud_format(void) {
 
 
 	request = construct_crud_request(
-		0, CRUD_CREATE, sizeof(CrudFileAllocationType) * CRUD_MAX_TOTAL_FILES,
+		0, CRUD_CREATE, CRUD_FILE_SIZE * CRUD_MAX_TOTAL_FILES,
 		CRUD_PRIORITY_OBJECT, 0);
 	response = crud_bus_request(request, crud_file_table);
 
@@ -399,16 +396,11 @@ uint16_t crud_mount(void) {
 	CrudResponse response;
 	CrudRequest request;
 
-	if (initFlag == 0) {
-		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
-		response = crud_bus_request(request, NULL); // Initialize Object Store
-		if (response & 0x1) //Sucsessfull CRUD Request
-			return (-1); // Failure to create new Object Store
-		initFlag = 1;
-	}
+	if (!initCheck())
+		return (-1);
 
 	request = construct_crud_request(
-		0, CRUD_READ, sizeof(CrudFileAllocationType) * CRUD_MAX_TOTAL_FILES,
+		0, CRUD_READ, CRUD_FILE_SIZE * CRUD_MAX_TOTAL_FILES,
 		CRUD_PRIORITY_OBJECT, 0);
 	response = crud_bus_request(request, crud_file_table);
 

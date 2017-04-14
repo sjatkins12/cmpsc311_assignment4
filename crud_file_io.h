@@ -20,7 +20,7 @@
 // Defines
 #define CRUD_MAX_TOTAL_FILES 1024
 #define CRUD_MAX_PATH_LENGTH 128
-
+#define CRUD_FILE_SIZE sizeof(CrudFileAllocationType)
 // Type definitions
 
 // This is the basic file handle structure (note: index into file table is fh)
