@@ -227,7 +227,7 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_WRITE : File Closed.");
 		return (-1);
 	}
-	cbuf = calloc(crud_file_table[fd].length);
+	cbuf = calloc(crud_file_table[fd].length, 1);
 	if (crud_file_table[fd].object_id != 0) {
 		// READ ALL OF OBJECT INTO CBUF
 		request = construct_crud_request(
