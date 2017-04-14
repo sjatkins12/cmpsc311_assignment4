@@ -78,8 +78,9 @@ int16_t crud_open(char *path) {
 				return (-1); //No Room in File Table
 			}
 		}
-		printf("FH: %d\nOID: %d\n", fh, oid);
+
 		deconstruct_crud_request(request, &oid, &req, &length, &flags, &res);
+		printf("FH: %d\nOID: %d\n", fh, oid);
 		crud_file_table[fh].object_id = oid;
 		crud_file_table[fh].position = 0;
 		crud_file_table[fh].length = length;
