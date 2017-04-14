@@ -202,6 +202,7 @@ int32_t crud_read(int16_t fd, void *buf, int32_t count) {
 
 int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 	CrudResponse response;
+	CrudResponse tmpResponse;
 	CrudRequest request;
 	char *tbuf;
 	char *cbuf;
