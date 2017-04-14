@@ -51,6 +51,7 @@ int16_t crud_open(char *path) {
 	CrudResponse response;
 
 	if (initFlag == 0) {
+		logMessage(LOG_INFO_LEVEL, "INIT");
 		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
 		response = crud_bus_request(request, NULL); // Initialize Object Store
 		if (response & 0x1) //Sucsessfull CRUD Request
@@ -69,8 +70,10 @@ int16_t crud_open(char *path) {
 	if (fh == CRUD_MAX_TOTAL_FILES) {
 		fh = 0;
 		buff = malloc(CRUD_MAX_OBJECT_SIZE);
+		printf("boobs\n");
 		request = construct_crud_request(0, CRUD_CREATE, 0, 0, 0);
 		response = crud_bus_request(request, buff); 
+		printf("but\n");
 		while (strcmp(crud_file_table[fh].filename, "") != 0) {
 			fh++;
 			if (fh == CRUD_MAX_TOTAL_FILES) {
