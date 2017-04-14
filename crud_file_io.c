@@ -45,7 +45,11 @@ int deconstruct_crud_request(CrudRequest request, CrudOID *oid,
 //
 // Implementation
 int16_t crud_open(char *path) {
-	int fh, req, length, flags, oid, res;
+	int fh;
+	CRUD_REQUEST_TYPES req;
+	uint32_t length;
+	uint8_t flags, res;
+	CrudOID oid;
 	char *buff;
 	CrudRequest request;
 	CrudResponse response;
@@ -205,7 +209,6 @@ int32_t crud_read(int16_t fd, void *buf, int32_t count) {
 
 int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 	CrudResponse response;
-	CrudResponse tmpResponse;
 	CrudRequest request;
 	char *tbuf;
 	char *cbuf;
