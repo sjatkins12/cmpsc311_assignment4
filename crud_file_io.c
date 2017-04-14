@@ -45,7 +45,7 @@ int deconstruct_crud_request(CrudRequest request, CrudOID *oid,
 //
 // Implementation
 int16_t crud_open(char *path) {
-	int fh, req, length, flags, oid, res;
+	int fh, *req, *length, *flags, *oid, *res;
 	char *buff;
 	CrudRequest request;
 	CrudResponse response;
@@ -85,11 +85,11 @@ int16_t crud_open(char *path) {
 			printf("FAILED CRUD\n");
 			return (-1); // Failure to create new Object Store
 		}
-		deconstruct_crud_request(request, &oid, &req, &length, &flags, &res);
-		printf("FH: %d\nOID: %d\n", fh, oid);
-		crud_file_table[fh].object_id = oid;
+		deconstruct_crud_request(request, oid, req, length, flags, res);
+		printf("FH: %d\nOID: %d\n", fh, *oid);
+		crud_file_table[fh].object_id = *oid;
 		crud_file_table[fh].position = 0;
-		crud_file_table[fh].length = length;
+		crud_file_table[fh].length = *length;
 		crud_file_table[fh].open = 1;
 		strcpy(crud_file_table[fh].filename, path);
 		free(buff);
