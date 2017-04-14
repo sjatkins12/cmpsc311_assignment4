@@ -45,18 +45,12 @@ int deconstruct_crud_request(CrudRequest request, CrudOID *oid,
 //
 // Implementation
 int16_t crud_open(char *path) {
-	int fh = 0;
-	int req = 0;
-	int length = 0;
-	int flags = 0;
-	CrudOID oid = 0;
-	int res = 0;
+	int fh, req, length, flags, oid, res;
 	char *buff;
 	CrudRequest request;
 	CrudResponse response;
 
 	if (initFlag == 0) {
-		logMessage(LOG_INFO_LEVEL, "INIT");
 		request = construct_crud_request(0, CRUD_INIT, 0, 0, 0);
 		response = crud_bus_request(request, NULL); // Initialize Object Store
 		if (response & 0x1) //Sucsessfull CRUD Request
@@ -75,10 +69,8 @@ int16_t crud_open(char *path) {
 	if (fh == CRUD_MAX_TOTAL_FILES) {
 		fh = 0;
 		buff = malloc(CRUD_MAX_OBJECT_SIZE);
-		printf("boobs\n");
 		request = construct_crud_request(0, CRUD_CREATE, 0, 0, 0);
 		response = crud_bus_request(request, buff); 
-		printf("but\n");
 		while (strcmp(crud_file_table[fh].filename, "") != 0) {
 			fh++;
 			if (fh == CRUD_MAX_TOTAL_FILES) {
@@ -86,12 +78,7 @@ int16_t crud_open(char *path) {
 				return (-1); //No Room in File Table
 			}
 		}
-		if (response & 0x1) { //Sucsessfull CRUD Request
-			printf("FAILED CRUD\n");
-			return (-1); // Failure to create new Object Store
-		}
 		deconstruct_crud_request(request, &oid, &req, &length, &flags, &res);
-		printf("FH: %d\nOID: %d\n", fh, oid);
 		crud_file_table[fh].object_id = oid;
 		crud_file_table[fh].position = 0;
 		crud_file_table[fh].length = length;
@@ -181,6 +168,9 @@ int32_t crud_read(int16_t fd, void *buf, int32_t count) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_READ : File Closed.");
 		return (-1);
 	}
+	if (crud_file_table[fd].object_id == 0)
+		return (0);
+	
 
 	tbuf = malloc(crud_file_table[fd].length); //Size of object
 	request = construct_crud_request(
@@ -215,7 +205,7 @@ int32_t crud_read(int16_t fd, void *buf, int32_t count) {
 
 int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 	CrudResponse response;
-	CrudResponse tmpRpesponse;
+	CrudResponse tmpResponse;
 	CrudRequest request;
 	char *tbuf;
 	char *cbuf;
@@ -237,25 +227,25 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_WRITE : File Closed.");
 		return (-1);
 	}
-	printf("OBJECTID: %d\n", crud_file_table[fd].object_id);
-	// READ ALL OF OBJECT INTO CBUF
-	request = construct_crud_request(
-		crud_file_table[fd].object_id, CRUD_READ, crud_file_table[fd].length, 0, 0);
-	cbuf = malloc(crud_file_table[fd].length);
-	response = crud_bus_request(request, cbuf);
-	if (response & 0x1) { //MAKE SURE GOOD READ
-		free(cbuf);
-		return (-1);
+	cbuf = calloc(crud_file_table[fd].length);
+	if (crud_file_table[fd].object_id != 0) {
+		// READ ALL OF OBJECT INTO CBUF
+		request = construct_crud_request(
+			crud_file_table[fd].object_id, CRUD_READ, crud_file_table[fd].length, 0, 0);
+		
+		response = crud_bus_request(request, cbuf);
+		if (response & 0x1) { //MAKE SURE GOOD READ
+			free(cbuf);
+			return (-1);
+		}
 	}
-	printf("BUTTS\n");
 	// Write to big for current Object
 	if (crud_file_table[fd].position + count > crud_file_table[fd].length) { 
 		// DELETE OLD OBJECT
-		printf("TITS\n");
 		request = construct_crud_request(
 			crud_file_table[fd].object_id, CRUD_DELETE, 0, 0, 0);
 		response = crud_bus_request(request, buf);
-		printf("ANUS\n");
+
 		if (response & 0x1) { //MAKE SURE GOOD DELETE
 			free(cbuf);
 			return (-1);
@@ -273,7 +263,7 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 			0, CRUD_CREATE, crud_file_table[fd].position + count, 0, 0);
 		response = crud_bus_request(request, tbuf);
 		free(tbuf);
-		printf("CUNT\n");
+
 		if (response & 0x1) { //MAKE SURE GOOD CREATE
 			return (-1);
 		}
@@ -284,14 +274,13 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		return (count);
 	}
 	else { //Object is large enough for write
-		printf("JUGS\n");
 		memcpy(&cbuf[crud_file_table[fd].position], buf, count); //Copy new data into cbuf
 		
 		//Update Object with new buf
 		request = construct_crud_request(
 			crud_file_table[fd].object_id, CRUD_UPDATE, crud_file_table[fd].length, 0, 0);
 		response = crud_bus_request(request, cbuf);
-		printf("SOCKS\n");
+
 		if (response & 0x1) { //MAKE SURE GOOD UPDATE
 			free(cbuf);
 			return (-1);
@@ -458,6 +447,7 @@ uint16_t crud_unmount(void) {
 	if (response & 0x1) //Sucsessfull CRUD Request
 		return (-1); 
 
+
 	// Log, return successfully
 	logMessage(LOG_INFO_LEVEL, "... unmount complete.");
 	return (0);
@@ -588,7 +578,6 @@ int crudIOUnitTest(void) {
 				// Log the write, perform it
 				logMessage(LOG_INFO_LEVEL, "CRUD_IO_UNIT_TEST : write of %d bytes [%x]", count, ch);
 				memset(&cio_utest_buffer[cio_utest_position], ch, count);
-				printf("%s%d\n", "TESTING WRITE ON FH #", fh);
 				bytes = crud_write(fh, &cio_utest_buffer[cio_utest_position], count);
 				if (bytes!=count) {
 					logMessage(LOG_ERROR_LEVEL, "CRUD_IO_UNIT_TEST : write failed [%d].", count);
