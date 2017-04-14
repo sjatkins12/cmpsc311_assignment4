@@ -240,15 +240,17 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		}
 	}
 	// Write to big for current Object
-	if (crud_file_table[fd].position + count > crud_file_table[fd].length) { 
-		// DELETE OLD OBJECT
-		request = construct_crud_request(
-			crud_file_table[fd].object_id, CRUD_DELETE, 0, 0, 0);
-		response = crud_bus_request(request, buf);
+	if (crud_file_table[fd].position + count > crud_file_table[fd].length) {
+		if (crud_file_table[fd].object_id != 0) { 
+			// DELETE OLD OBJECT
+			request = construct_crud_request(
+				crud_file_table[fd].object_id, CRUD_DELETE, 0, 0, 0);
+			response = crud_bus_request(request, buf);
 
-		if (response & 0x1) { //MAKE SURE GOOD DELETE
-			free(cbuf);
-			return (-1);
+			if (response & 0x1) { //MAKE SURE GOOD DELETE
+				free(cbuf);
+				return (-1);
+			}
 		}
 
 		tbuf = malloc(crud_file_table[fd].position + count);
