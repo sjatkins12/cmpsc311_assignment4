@@ -78,7 +78,10 @@ int16_t crud_open(char *path) {
 				return (-1); //No Room in File Table
 			}
 		}
-
+		if (response & 0x1) { //Sucsessfull CRUD Request
+			printf("FAILED CRUD\n");
+			return (-1); // Failure to create new Object Store
+		}
 		deconstruct_crud_request(request, &oid, &req, &length, &flags, &res);
 		printf("FH: %d\nOID: %d\n", fh, oid);
 		crud_file_table[fh].object_id = oid;
