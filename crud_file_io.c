@@ -224,7 +224,7 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_WRITE : File Closed.");
 		return (-1);
 	}
-	printf("BOOBS\n");
+	printf("OBJECTID: %d\n", crud_file_table[fd].object_id);
 	// READ ALL OF OBJECT INTO CBUF
 	request = construct_crud_request(
 		crud_file_table[fd].object_id, CRUD_READ, crud_file_table[fd].length, 0, 0);
