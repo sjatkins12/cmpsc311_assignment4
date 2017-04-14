@@ -224,7 +224,7 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		logMessage(LOG_ERROR_LEVEL, "CRUD_IO_WRITE : File Closed.");
 		return (-1);
 	}
-
+	printf("BOOBS\n");
 	// READ ALL OF OBJECT INTO CBUF
 	request = construct_crud_request(
 		crud_file_table[fd].object_id, CRUD_READ, crud_file_table[fd].length, 0, 0);
@@ -234,14 +234,15 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		free(cbuf);
 		return (-1);
 	}
-
+	printf("BUTTS\n");
 	// Write to big for current Object
 	if (crud_file_table[fd].position + count > crud_file_table[fd].length) { 
 		// DELETE OLD OBJECT
+		printf("TITS\n");
 		request = construct_crud_request(
 			crud_file_table[fd].object_id, CRUD_DELETE, 0, 0, 0);
 		response = crud_bus_request(request, buf);
-
+		printf("ANUS\n");
 		if (response & 0x1) { //MAKE SURE GOOD DELETE
 			free(cbuf);
 			return (-1);
@@ -259,7 +260,7 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 			0, CRUD_CREATE, crud_file_table[fd].position + count, 0, 0);
 		response = crud_bus_request(request, tbuf);
 		free(tbuf);
-
+		printf("CUNT\n");
 		if (response & 0x1) { //MAKE SURE GOOD CREATE
 			return (-1);
 		}
@@ -270,13 +271,14 @@ int32_t crud_write(int16_t fd, void *buf, int32_t count) {
 		return (count);
 	}
 	else { //Object is large enough for write
+		printf("JUGS\n");
 		memcpy(&cbuf[crud_file_table[fd].position], buf, count); //Copy new data into cbuf
 		
 		//Update Object with new buf
 		request = construct_crud_request(
 			crud_file_table[fd].object_id, CRUD_UPDATE, crud_file_table[fd].length, 0, 0);
 		response = crud_bus_request(request, cbuf);
-
+		printf("SOCKS\n");
 		if (response & 0x1) { //MAKE SURE GOOD UPDATE
 			free(cbuf);
 			return (-1);
@@ -574,6 +576,7 @@ int crudIOUnitTest(void) {
 				// Log the write, perform it
 				logMessage(LOG_INFO_LEVEL, "CRUD_IO_UNIT_TEST : write of %d bytes [%x]", count, ch);
 				memset(&cio_utest_buffer[cio_utest_position], ch, count);
+				printf("%s%d\n", "TESTING WRITE ON FH #", fh);
 				bytes = crud_write(fh, &cio_utest_buffer[cio_utest_position], count);
 				if (bytes!=count) {
 					logMessage(LOG_ERROR_LEVEL, "CRUD_IO_UNIT_TEST : write failed [%d].", count);
